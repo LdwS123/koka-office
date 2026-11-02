@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Voice Teleprompter</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#bar{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:#111c;backdrop-filter:blur(8px);border-bottom:1px solid #333}
+#bar.hide{display:none}
+button,select{background:#222;color:#fff;border:1px solid #444;border-radius:9px;padding:8px 12px;font-size:14px;cursor:pointer}
+button:hover{background:#333}
+button.on{background:#c62828;border-color:#ff5252}
+#status{font-size:13px;color:#9aa;margin-left:auto}
+#status b{color:#5ef2a6}
+input[type=range]{width:90px}
+#stage{position:fixed;inset:0;overflow-y:auto;padding:38vh 8vw 60vh;scrollbar-width:none}
+#stage::-webkit-scrollbar{display:none}
+#stage.mirror{transform:scaleX(-1)}
+#text{font-size:56px;line-height:1.35;font-weight:700;max-width:1100px;margin:0 auto;position:relative}
+.p{margin:0 0 1.1em}
+.w{color:#fff;transition:color .25s,opacity .25s;cursor:pointer;border-radius:6px}
+.w.done{color:#5d6a77;opacity:.55}
+.w.cur{background:#ffd166;color:#000;padding:0 .12em;margin:0 -.12em}
+#line{position:fixed;left:0;right:0;top:38vh;height:0;border-top:2px dashed #ffffff22;pointer-events:none;z-index:2}
+#editor{position:fixed;inset:0;z-index:10;background:#000e;display:flex;flex-direction:column;gap:10px;padding:70px 5vw 20px}
+#editor[hidden]{display:none}
+#editor textarea{flex:1;background:#111;color:#fff;border:1px solid #444;border-radius:12px;padding:16px;font-size:18px;line-height:1.5;font-family:inherit}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;border:1px solid #555;border-radius:99px;padding:8px 18px;font-size:14px;z-index:9;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+</style></head><body>
+<div id="bar">
+  <button id="mic">🎙 Start voice</button>
+  <button id="auto">⏬ Auto-scroll</button>
+  <input id="speed" type="range" min="10" max="160" value="45" title="Auto-scroll speed">
+  <button id="reset">↺ Reset</button>
+  <button id="smaller">A−</button><button id="bigger">A+</button>
+  <button id="mirror">⇋ Mirror</button>
+  <select id="lang"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option></select>
+  <button id="edit">✏️ Edit script</button>
+  <button id="hide">Hide bar (H)</button>
+  <span id="status">Ready</span>
+</div>
+<div id="stage"><div id="text"></div></div>
+<div id="line"></div>
+<div id="editor" hidden><textarea id="ta" spellcheck="false"></textarea><div><button id="save">Save &amp; close</button> <button id="defaults">Restore default</button></div></div>
+<div id="toast"></div>
+<script>
+const DEFAULT=`The job market isn't dead. You're just applying like it's 2015.
+
+So I built a company. Eighteen AI agents, each with a name and a desk. This is Léa. She scouts Station F startups. This is Max. He hunts Y Combinator companies.
+
+A watcher scans over a thousand career pages every five minutes. The second a fresh job appears, an agent reads it, picks the right CV, writes a custom answer, and fills in the whole application.
+
+And every time one is sent, the agent walks to the Job Center and hands it in. Plus one application filed.
+
+Around three hundred confirmed so far. All real, with true answers and nothing invented. The goal: a thousand a week.
+
+The job market isn't dead. You were just applying one at a time. Follow to see the response rate.`;
+
+const $=id=>document.getElementById(id);
+const stage=$('stage'),text=$('text');
+let script=localStorage.getItem('tp_script')||DEFAULT;
+let words=[],pos=0,fontPx=+localStorage.getItem('tp_font')||56;
+
+const norm=w=>w.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+const NUMW={'1':'one','2':'two','3':'three','4':'four','5':'five','6':'six','7':'seven','8':'eight','9':'nine','10':'ten','12':'twelve','18':'eighteen','20':'twenty','50':'fifty','100':'hundred','300':'three','1000':'thousand','2015':'twenty'};
+const heard=w=>{const n=norm(w);return NUMW[n]||n};
+const STOP=new Set(['the','a','an','and','to','of','i','it','is','in','on','my','you','so','he','she','at','for','up','its','was','are','all','with','that','this']);
+const eq=(a,b)=>a===b||(a.length>=4&&b.length>=4&&a.slice(0,4)===b.slice(0,4)&&Math.abs(a.length-b.length)<=3);
+
+function render(){
+  text.replaceChildren();words=[];
+  script.split(/\n\s*\n/).forEach(par=>{
+    const p=document.createElement('div');p.className='p';
+    par.trim().split(/\s+/).filter(Boolean).forEach(tok=>{
+      const s=document.createElement('span');s.className='w';s.textContent=tok+' ';
+      s.dataset.i=words.length;words.push({el:s,n:heard(tok)});p.append(s);
+    });
+    text.append(p);
+  });
+  text.style.fontSize=fontPx+'px';
+  setPos(0,true);
+}
+function setPos(p,noScroll){
+  pos=Math.max(0,Math.min(words.length,p));
+  words.forEach((w,i)=>{w.el.classList.toggle('done',i<pos);w.el.classList.toggle('cur',i===pos)});
+  const cur=words[Math.min(pos,words.length-1)];
+  if(cur&&!noScroll)stage.scrollTo({top:cur.el.offsetTop-stage.clientHeight*.38+padTop(),behavior:'smooth'});
+  if(noScroll)stage.scrollTo({top:0});
+  $('status').innerHTML=listening?`<b>● listening</b> · word ${pos}/${words.length}`:`word ${pos}/${words.length}`;
+}
+const padTop=()=>parseFloat(getComputedStyle(stage).paddingTop)||0;
+text.addEventListener('click',e=>{const s=e.target.closest('.w');if(s)setPos(+s.dataset.i)});
+
+// ---- follow the voice: match the last few spoken words against the script, only moving forward ----
+function feed(transcript){
+  const spoken=transcript.split(/\s+/).map(heard).filter(Boolean);
+  const tail=spoken.slice(-4);
+  for(let k=Math.min(4,tail.length);k>=1;k--){
+    const seq=tail.slice(-k);
+    const from=Math.max(0,pos-3),to=Math.min(words.length-k,pos+14);
+    for(let i=from;i<=to;i++){
+      let ok=true;
+      for(let j=0;j<k;j++){if(!eq(words[i+j].n,seq[j])){ok=false;break}}
+      if(!ok)continue;
+      if(k===1&&STOP.has(seq[0])&&i!==pos)continue;      // ignore lone filler words unless exactly expected
+      if(k===1&&i>pos+6)continue;                         // a single word may only jump a little
+      if(i+k>pos){setPos(i+k)}
+      return;
+    }
+  }
+}
+window.__feed=feed;   // handy for testing without a microphone
+
+// ---- speech recognition (Chrome / Edge / Safari; audio is processed by the browser vendor's service) ----
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,listening=false;
+function startVoice(){
+  if(!SR){toast('Speech recognition is not supported in this browser. Use Chrome, or the Auto-scroll button.');return}
+  rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang=$('lang').value;
+  rec.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript+' ';feed(t)};
+  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){stopVoice();toast('Microphone blocked. Allow it in the address bar, then try again.')}};
+  rec.onend=()=>{if(listening)setTimeout(()=>{try{rec.start()}catch(_){}} ,150)};   // Chrome stops after silence: restart
+  try{rec.start();listening=true;$('mic').classList.add('on');$('mic').textContent='⏹ Stop voice';setPos(pos,true)}catch(e){toast('Could not start the microphone')}
+}
+function stopVoice(){listening=false;if(rec){try{rec.stop()}catch(_){}}$('mic').classList.remove('on');$('mic').textContent='🎙 Start voice';setPos(pos,true)}
+$('mic').onclick=()=>listening?stopVoice():startVoice();
+$('lang').onchange=()=>{if(listening){stopVoice();startVoice()}};
+
+// ---- manual auto-scroll fallback ----
+let autoOn=false,last=0;
+function autoLoop(t){if(!autoOn)return;const dt=(t-last)/1000;last=t;stage.scrollTop+=$('speed').value*dt;requestAnimationFrame(autoLoop)}
+$('auto').onclick=()=>{autoOn=!autoOn;$('auto').classList.toggle('on',autoOn);if(autoOn){last=performance.now();requestAnimationFrame(autoLoop)}};
+
+// ---- controls ----
+$('reset').onclick=()=>{setPos(0,true)};
+$('bigger').onclick=()=>{fontPx=Math.min(140,fontPx+6);localStorage.setItem('tp_font',fontPx);text.style.fontSize=fontPx+'px'};
+$('smaller').onclick=()=>{fontPx=Math.max(24,fontPx-6);localStorage.setItem('tp_font',fontPx);text.style.fontSize=fontPx+'px'};
+$('mirror').onclick=()=>stage.classList.toggle('mirror');
+$('hide').onclick=()=>$('bar').classList.add('hide');
+$('edit').onclick=()=>{$('ta').value=script;$('editor').hidden=false};
+$('save').onclick=()=>{script=$('ta').value.trim()||DEFAULT;localStorage.setItem('tp_script',script);$('editor').hidden=true;render()};
+$('defaults').onclick=()=>{$('ta').value=DEFAULT};
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA')return;
+  if(e.key===' '){e.preventDefault();listening?stopVoice():startVoice()}
+  else if(e.key==='h'||e.key==='H')$('bar').classList.toggle('hide');
+  else if(e.key==='r'||e.key==='R')setPos(0,true);
+  else if(e.key==='m'||e.key==='M')stage.classList.toggle('mirror');
+  else if(e.key==='ArrowRight')setPos(pos+1);
+  else if(e.key==='ArrowLeft')setPos(pos-1);
+  else if(e.key==='+'||e.key==='=')$('bigger').click();
+  else if(e.key==='-')$('smaller').click();
+});
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),3500)}
+if(!SR)toast('No speech recognition here: use Chrome for voice-follow, or Auto-scroll.');
+render();
+</script></body></html>
