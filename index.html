@@ -16,8 +16,17 @@ canvas{display:block}
 .msg{font-size:11.5px;background:#0003;border-radius:9px;padding:5px 8px}.msg b{color:#a99cff}.msg i{float:right;color:#a9a6d6;font-style:normal}.msg.ok{outline:1px solid #5ef2a6}
 .bo{display:flex;gap:8px;align-items:center;margin-top:5px;font-size:12px}.bo .e{font-size:20px}.bo small{color:#a9a6d6;display:block;font-size:10.5px}
 .on{color:#5ef2a6}.offc{color:#ff7a90}
+#tip{position:fixed;left:0;top:0;z-index:99999;width:286px;background:#14132aee;border:1px solid #4a4780;border-radius:14px;padding:11px 13px;font-size:12px;line-height:1.35;color:#e8e6ff;box-shadow:0 10px 30px #000a;pointer-events:none;opacity:0;transition:opacity .12s;backdrop-filter:blur(6px)}
+#tip.show{opacity:1}
+#tip h4{margin:0;font-size:14px}#tip .rl{color:#9b99c9;font-size:11px;margin:1px 0 7px}
+#tip .st{display:flex;gap:6px;align-items:center;margin-bottom:6px}#tip .dot{width:8px;height:8px;border-radius:50%;background:#666}#tip .dot.work{background:#5ef2a6}#tip .dot.limit{background:#ffd166}
+#tip .say{color:#cfcdf5;font-style:italic;margin-bottom:7px;max-height:3.9em;overflow:hidden}
+#tip .sec{margin-top:7px;padding-top:6px;border-top:1px solid #34325a}#tip .sec>b{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8785c4;margin-bottom:3px}
+#tip .row{display:flex;justify-content:space-between;gap:8px}#tip .row span:last-child{font-weight:700;color:#fff;text-align:right}
+#tip .mdl{display:inline-block;border-radius:6px;padding:0 6px;font-weight:700;background:#2b2a55}#tip .mdl.opus{background:#6a2d5f;color:#ffd3f1}#tip .mdl.sonnet{background:#2d4f6a;color:#cfeaff}#tip .mdl.haiku{background:#2d6a4a;color:#d3ffe8}
+#tip small{color:#8785c4;display:block;margin-top:5px;font-size:10px}
 .tag{position:fixed;left:0;top:0;transform:translate(-50%,-100%);pointer-events:none;text-align:center;white-space:nowrap;will-change:transform}
-.tag .n{display:inline-block;background:#1b1a2ecc;border:2px solid #4a4780;border-radius:99px;padding:1px 9px;font-weight:700;font-size:12px}
+.tag .n{pointer-events:auto;cursor:help;display:inline-block;background:#1b1a2ecc;border:2px solid #4a4780;border-radius:99px;padding:1px 9px;font-weight:700;font-size:12px}
 .tag.work .n{border-color:#5ef2a6}.tag.limit .n{border-color:#ffd166}
 .tag .b{display:block;margin:3px auto 0;max-width:170px;font-size:10.5px;white-space:normal;background:#fffffff0;color:#1b1a2e;border-radius:10px;padding:3px 8px;line-height:1.2;box-shadow:0 2px 6px #0006}
 .tag .b.sent{background:#5ef2a6;font-weight:700}
@@ -119,7 +128,7 @@ function setup(desks){
  desks.forEach((d,i)=>{const ri=depts.indexOf(d.dept);const s=cnt[ri]=(cnt[ri]||0);cnt[ri]++;const p=deskPos(ri,s);buildDesk(p,ri);
   const c=makeChar(i);c.d=d;c.home=p;c.room=ri;c.place={room:ri};c.pos=new THREE.Vector3(p.chair.x,0,p.chair.z);c.mode='init';c.queue=[];c.t=Math.random()*10;c.conf=d.conf;c.run=d.run;c.sat=false;
   scene.add(c.g);chars.push(c);
-  const tg=document.createElement('div');tg.className='tag';tg.innerHTML='<span class="n"></span><span class="b"></span>';document.body.appendChild(tg);tags.push(tg);});
+  const tg=document.createElement('div');tg.className='tag';tg.innerHTML='<span class="n"></span><span class="b"></span>';document.body.appendChild(tg);tags.push(tg);const n=tg.querySelector('.n'),ix=i;n.addEventListener('pointerenter',()=>{hoverPill=ix});n.addEventListener('pointerleave',()=>{if(hoverPill===ix)hoverPill=-1});});
  chars.forEach(c=>{c.g.position.copy(c.pos);});
 }
 // ---------- navigation ----------
@@ -165,9 +174,12 @@ function setBubble(c,txt,sent,ms){const b=tags[chars.indexOf(c)].querySelector('
 const SD=[{"id": 0, "name": "L\u00e9a", "avatar": "\ud83d\udc69\u200d\ud83d\ude80", "dept": "Station F", "role": "Station F scout: freshest postings from campus startups"}, {"id": 1, "name": "Max", "avatar": "\ud83e\uddd1\u200d\ud83d\udcbb", "dept": "Y Combinator", "role": "YC hunter: YC startups hiring, remote or visa"}, {"id": 2, "name": "Anouk", "avatar": "\ud83d\udc69\u200d\ud83d\udcbc", "dept": "Funds & Portfolios", "role": "a16z / YC analyst: sweeps portfolio career pages"}, {"id": 3, "name": "Jules", "avatar": "\ud83d\udd75\ufe0f", "dept": "Station F", "role": "Station F watcher, 2nd pass on the 60 newest postings"}, {"id": 4, "name": "Zo\u00e9", "avatar": "\ud83e\udd8a", "dept": "Y Combinator", "role": "YC tracker: YC-hiring list to Ashby/Greenhouse/Lever APIs"}, {"id": 5, "name": "Hugo", "avatar": "\ud83e\udded", "dept": "Funds & Portfolios", "role": "Venture scout: Sequoia, Index, Accel, Lightspeed, GC"}, {"id": 6, "name": "Sam", "avatar": "\ud83d\uddfd", "dept": "North America", "role": "US & Canada lead: remote or visa-sponsored roles"}, {"id": 7, "name": "Clara", "avatar": "\ud83c\udfe2", "dept": "Big Tech", "role": "Big Tech via API: Stripe, Datadog, Cloudflare, Anthropic..."}, {"id": 8, "name": "Victor", "avatar": "\ud83c\udfdb\ufe0f", "dept": "Big Tech", "role": "Big Tech career sites: Google, Microsoft, AWS, Salesforce..."}, {"id": 9, "name": "In\u00e8s", "avatar": "\ud83d\udc51", "dept": "ATS Boards", "role": "Queen of Ashby: dozens of Ashby boards in bulk"}, {"id": 10, "name": "Th\u00e9o", "avatar": "\ud83c\udfdd\ufe0f", "dept": "Remote", "role": "Nomad: remote-first startups, Europe / worldwide"}, {"id": 11, "name": "Nina", "avatar": "\ud83c\udf3f", "dept": "ATS Boards", "role": "Greenhouse: SDR, BDR, CS, partnerships EMEA"}, {"id": 12, "name": "Louis", "avatar": "\ud83c\udf4b", "dept": "ATS Boards", "role": "Lever: sales, growth, CS, content"}, {"id": 13, "name": "Manon", "avatar": "\ud83e\udd50", "dept": "French SMEs", "role": "Teamtailor / Recruitee: French companies, Paris"}, {"id": 14, "name": "Adam", "avatar": "\ud83d\udee0\ufe0f", "dept": "ATS Boards", "role": "Workable & SmartRecruiters (1 request / 2 s)"}, {"id": 15, "name": "Sarah", "avatar": "\ud83d\udd0e", "dept": "Web Research", "role": "Web detective: career pages found by search"}, {"id": 16, "name": "No\u00e9", "avatar": "\ud83c\udf0d", "dept": "EMEA", "role": "EMEA desk: UK, Ireland, remote Europe (sponsorship stated)"}, {"id": 17, "name": "Lina", "avatar": "\ud83c\udfac", "dept": "Creators & AI GTM", "role": "Creators, community, GTM, founder's associate, AI startups"}];
 const SAYS=['Reading the job description and tailoring the cover letter','Filling in the application form step by step','Checking the posting is under 24 h old','Writing a specific answer to the free-text question','Scanning a careers page for fresh roles','Double-checking the location field','Uploading the right CV variant','Skipping a posting that explicitly refuses sponsorship'];
 let TICK=0;const CONFS=SD.map(()=>0);let FEED=[];
+function fakeUsage(i,w){const m=['claude-sonnet-5-5','claude-opus-5-5','claude-haiku-5-5'][i%3];const k=1+(i*7%5)/4,r=3+i%4;
+ const cur=w?{tag:'R'+i,in:30+TICK,cw:Math.round(140000*k),cr:Math.round((9e4*TICK+8e5)*k),out:Math.round((380+90*TICK)*k),turns:6+TICK,tools:8+TICK,cost:null,model:m,est:true}:null;
+ return {runs:r,in:Math.round(300*r*k),cw:Math.round(2.1e5*r*k),cr:Math.round(9e6*r*k),out:Math.round(4.2e4*r*k),turns:Math.round(95*r),tools:Math.round(140*r),cost:Math.round(r*2.3*k*100)/100,cost_known:r,confirmed:CONFS[i]+3*r,models:{[m]:r},model:m,...(cur?{cur}:{})}}
 function fakeData(){TICK++;
  const desks=SD.map((x,i)=>{const w=((i*5+Math.floor(TICK/9))%3)!==0;if(w&&Math.random()<.12)CONFS[i]++;
-  return {...x,status:w?'work':'off',run:w?'R'+i:null,say:w?SAYS[(i+Math.floor(TICK/3))%SAYS.length]:null,tool:null,conf:CONFS[i],since:null,idle:null,last_run:null}});
+  return {...x,status:w?'work':'off',run:w?'R'+i:null,say:w?SAYS[(i+Math.floor(TICK/3))%SAYS.length]:null,tool:null,conf:CONFS[i],since:null,idle:null,last_run:null,usage:fakeUsage(i,w)}});
  if(TICK%2===0){const i=Math.floor(Math.random()*SD.length);const now=new Date().toTimeString().slice(0,8);FEED.unshift({t:now,who:SD[i].name,tag:'D',msg:Math.random()<.3?'🎉 Application confirmed':SAYS[Math.floor(Math.random()*SAYS.length)]});FEED=FEED.slice(0,30)}
  const tot=CONFS.reduce((a,b)=>a+b,0);
  return {updated:'simulated demo data',claude:5,desks,feed:FEED,queue:{fresh:52+(TICK%7),fallback:3,total:1000,dispatched:150+tot},sent:0,skipped:0,confirmed_log:297+tot,cvs:31,boards:954,support:{supervisor:{etime:'demo'},watcher:{etime:'demo'},caffeinate:{etime:'demo'}}}}
@@ -237,6 +249,50 @@ function step(c,dt){
  if(c.sat&&!q)sitting=true;
  applyPose(c,dt,moving,sitting&&!moving,typing);
 }
+// ---------- hover card: model + token spend per agent ----------
+const tip=document.createElement('div');tip.id='tip';document.body.appendChild(tip);
+let mouse={x:-999,y:-999},hoverPill=-1,hoverIdx=-1,tipSig='';
+addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+function fmt(n){n=n||0;return n>=1e6?(n/1e6).toFixed(n>=1e7?1:2)+'M':n>=1e3?(n/1e3).toFixed(n>=1e5?0:1)+'k':String(n)}
+function fam(m){return /opus/i.test(m||'')?'opus':/sonnet/i.test(m||'')?'sonnet':/haiku/i.test(m||'')?'haiku':''}
+function tipHTML(d){
+ const u=d.usage,esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+ const stTxt=d.status==='work'?'At their desk, working':d.status==='limit'?'Paused: usage limit reached':'Off duty';
+ let h='<h4>'+esc(d.avatar)+' '+esc(d.name)+' <span style="font-weight:400;color:#9b99c9">· '+esc(d.dept)+'</span></h4><div class="rl">'+esc(d.role)+'</div>';
+ h+='<div class="st"><i class="dot '+d.status+'"></i><b>'+stTxt+'</b>'+(d.run?'<span style="color:#9b99c9">· run '+esc(d.run)+'</span>':'')+'</div>';
+ if(d.status==='work'&&d.say)h+='<div class="say">“'+esc(d.say.slice(0,110))+'”</div>';
+ if(!u){return h+'<div class="sec"><b>Usage</b>No token data yet.</div>'}
+ const c=u.cur,mdl=(c&&c.model)||u.model;
+ h+='<div class="sec"><b>Model</b><div class="row"><span>'+(c?'Running now':'Last run')+'</span><span><span class="mdl '+fam(mdl)+'">'+esc(mdl||'unknown')+'</span></span></div>';
+ const mix=Object.entries(u.models||{});if(mix.length>1)h+='<small>History: '+mix.map(([m,n])=>n+'× '+esc(m.replace('claude-',''))).join(' · ')+'</small>';
+ h+='</div>';
+ if(c){h+='<div class="sec"><b>This run ('+esc(c.tag)+')'+(c.est?' · live estimate':'')+'</b>'
+  +'<div class="row"><span>Output tokens</span><span>'+fmt(c.out)+'</span></div>'
+  +'<div class="row"><span>New input (incl. cache writes)</span><span>'+fmt(c.in+c.cw)+'</span></div>'
+  +'<div class="row"><span>Cached context re-read</span><span>'+fmt(c.cr)+'</span></div>'
+  +'<div class="row"><span>Turns · tool calls</span><span>'+c.turns+' · '+c.tools+'</span></div>'
+  +(c.cost!=null?'<div class="row"><span>API-equivalent cost</span><span>≈ $'+c.cost.toFixed(2)+'</span></div>':'')+'</div>'}
+ h+='<div class="sec"><b>All time · '+u.runs+' run'+(u.runs>1?'s':'')+'</b>'
+  +'<div class="row"><span>Output tokens</span><span>'+fmt(u.out)+'</span></div>'
+  +'<div class="row"><span>New input (incl. cache writes)</span><span>'+fmt(u.in+u.cw)+'</span></div>'
+  +'<div class="row"><span>Cached context re-read</span><span>'+fmt(u.cr)+'</span></div>'
+  +'<div class="row"><span>Applications confirmed</span><span>'+u.confirmed+'</span></div>'
+  +(u.confirmed>0?'<div class="row"><span>Tokens per confirmation</span><span>'+fmt(Math.round((u.out+u.in+u.cw)/u.confirmed))+'</span></div>':'')
+  +(u.cost_known?'<div class="row"><span>API-equivalent cost'+(u.cost_known<u.runs?' ('+u.cost_known+'/'+u.runs+' runs priced)':'')+'</span><span>≈ $'+u.cost.toFixed(2)+'</span></div>':'')
+  +'</div>';
+ if(data_note)h+='<small>'+data_note+'</small>';
+ return h}
+let data_note='Simulated numbers: demo only, not real usage';
+function updTip(){
+ let idx=hoverPill;
+ if(idx<0&&mouse.x>-900){let best=1e9;chars.forEach((c,i)=>{v.set(c.g.position.x,1.1,c.g.position.z).project(camera);const px=(v.x+1)/2*innerWidth,py=(1-v.y)/2*innerHeight;const r=Math.max(14,Math.min(34,1500/dist)),dd=Math.hypot(px-mouse.x,py-mouse.y);if(dd<r&&dd<best){best=dd;idx=i}})}
+ if(drag)idx=-1;
+ if(idx<0){tip.classList.remove('show');hoverIdx=-1;return}
+ const d=chars[idx].d,sig=idx+'|'+JSON.stringify(d.usage||0)+d.status+(d.say||'');
+ if(sig!==tipSig){tip.innerHTML=tipHTML(d);tipSig=sig}
+ hoverIdx=idx;tip.classList.add('show');
+ const w=tip.offsetWidth,h=tip.offsetHeight;let x=mouse.x+18,y=mouse.y+14;if(x+w>innerWidth-8)x=mouse.x-w-18;if(y+h>innerHeight-8)y=innerHeight-h-8;if(y<8)y=8;
+ tip.style.transform=`translate(${x}px,${y}px)`}
 // camera orbit
 let az=0.0,pol=.62,dist=84;const target=new THREE.Vector3(30,0,10);
 let drag=null;addEventListener('pointerdown',e=>{if(e.target.closest('#side'))return;drag={x:e.clientX,y:e.clientY}});addEventListener('pointerup',()=>drag=null);
@@ -256,6 +312,7 @@ function loop(){
   t.className='tag '+c.d.status;t.style.zIndex=Math.round((1-v.z)*1000);
   const n=t.querySelector('.n'),b=t.querySelector('.b');const nm=c.d.avatar+' '+c.d.name;if(n.textContent!==nm)n.textContent=nm;
   if(c.bubbleUntil&&now<c.bubbleUntil){}else{c.bubbleUntil=0;const txt=dist>60?(c.d.status==='limit'?'😴':''):c.d.status==='work'?(c.d.say||'').slice(0,80):c.d.status==='limit'?'😴 usage limit reached':'';if(b.textContent!==txt)b.textContent=txt;b.className='b'}});
+ updTip();
  v.set(poleTag.x,poleTag.y,poleTag.z).project(camera);const p=$('pole');p.style.transform=`translate(${(v.x+1)/2*innerWidth}px,${(1-v.y)/2*innerHeight}px) translate(-50%,-100%)`;
  renderer.render(scene,camera);requestAnimationFrame(loop)}
 loop();
