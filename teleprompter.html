@@ -18,6 +18,7 @@ input[type=range]{width:90px}
 #stage.mirror{transform:scaleX(-1)}
 #text{font-size:56px;line-height:1.35;font-weight:700;max-width:1100px;margin:0 auto;position:relative}
 .p{margin:0 0 1.1em}
+.cue{margin:0 0 1.1em;color:#ffd166;font-size:.5em;font-weight:800;letter-spacing:.2em;opacity:.8}
 .w{color:#fff;transition:color .25s,opacity .25s;cursor:pointer;border-radius:6px}
 .w.done{color:#5d6a77;opacity:.55}
 .w.cur{background:#ffd166;color:#000;padding:0 .12em;margin:0 -.12em}
@@ -45,17 +46,25 @@ input[type=range]{width:90px}
 <div id="editor" hidden><textarea id="ta" spellcheck="false"></textarea><div><button id="save">Save &amp; close</button> <button id="defaults">Restore default</button></div></div>
 <div id="toast"></div>
 <script>
-const DEFAULT=`The job market isn't dead. You're just applying like it's 2015.
+const DEFAULT=`I hired eighteen AI employees. And I gave them only one job: get me a job.
 
-So I built a company. Eighteen AI agents, each with a name and a desk. This is Léa. She scouts Station F startups. This is Max. He hunts Y Combinator companies.
+[ DING ]
 
-A watcher scans over a thousand career pages every five minutes. The second a fresh job appears, an agent reads it, picks the right CV, writes a custom answer, and fills in the whole application.
+So let me introduce them. This is Léa. She scouts Station F startups, day and night. This is Max. He hunts Y Combinator companies. Each one reads a job, decides if it's a good fit, and fills in the whole application. And when it's sent, they walk to the Job Center and hand it in.
 
-And every time one is sent, the agent walks to the Job Center and hands it in. Plus one application filed.
+Anyone can build this, for any job they want. I'll show you how, in five simple steps.
 
-Around three hundred confirmed so far. All real, with true answers and nothing invented. The goal: a thousand a week.
+Step one. Get Claude Code or Cursor. That's your builder. Describe what you want, and it writes the code.
 
-The job market isn't dead. You were just applying one at a time. Follow to see the response rate.`;
+Step two. Give it your profile and your rules. Your real CV. Nothing invented. Fresh jobs only. One application per company.
+
+Step three. Build a watcher. It scans public job boards every few minutes, so you're the first to apply.
+
+Step four. Launch your agents. Each one tailors the answers and fills in the form.
+
+Step five. Track everything. Count an application only when you see the confirmation.
+
+Want to build your own? I put it all in a repo on GitHub. Comment JOB, and I'll send it to you.`;
 
 const $=id=>document.getElementById(id);
 const stage=$('stage'),text=$('text');
@@ -71,6 +80,7 @@ const eq=(a,b)=>a===b||(a.length>=4&&b.length>=4&&a.slice(0,4)===b.slice(0,4)&&M
 function render(){
   text.replaceChildren();words=[];
   script.split(/\n\s*\n/).forEach(par=>{
+    if(/^\[.*\]$/s.test(par.trim())){const c=document.createElement('div');c.className='cue';c.textContent=par.trim();text.append(c);return}
     const p=document.createElement('div');p.className='p';
     par.trim().split(/\s+/).filter(Boolean).forEach(tok=>{
       const s=document.createElement('span');s.className='w';s.textContent=tok+' ';
